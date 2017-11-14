@@ -1,0 +1,40 @@
+mkdir -p ~/.docker-stack ~/.docker-jupyter/.local ~/.docker-jupyter/usr/local ~/.jupyter ~/.ihaskell
+UID="$(id -u)"
+docker run -i -v ~/.docker-jupyter/usr/local:/usr/local \
+         -v ~/.docker-jupyter/.local:/.local \
+         -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         pip3 install -r requirements.txt
+docker run -i -v ~/.docker-jupyter/usr/local:/usr/local \
+         -v ~/.docker-jupyter/.local:/.local \
+         -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         pip3 install bash_kernel
+docker run -i -v ~/.docker-jupyter/usr/local:/usr/local \
+         -v ~/.docker-jupyter/.local:/.local \
+         -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         python3 -m bash_kernel.install
+docker run -i -v -v ~/.docker-stack:/.stack \
+         -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         stack config set system-ghc --global true
+docker run -i -v ~/.docker-jupyter/usr/local:/usr/local \
+         -v ~/.docker-stack:/.stack \
+         -v "$PWD":/app -w /app -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         stack --local-bin-path /usr/local/bin install
+docker run -i -v ~/.jupyter:/.jupyter -v ~/.ihaskell:/.ihaskell \
+         -v ~/.docker-jupyter/usr/local:/usr/local \
+         -v ~/.docker-stack:/.stack \
+         -v ~/.docker-jupyter/.local:/.local \
+         -v "$PWD":/app -w /app -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         ihaskell install --stack
+docker run -p 8888:8888 -i -v ~/.jupyter:/.jupyter -v ~/.ihaskell:/.ihaskell \
+         -v ~/.docker-jupyter/usr/local:/usr/local \
+         -v ~/.docker-stack:/.stack \
+         -v ~/.docker-jupyter/.local:/.local \
+         -v "$PWD":/app -w /app -u "$UID" \
+         fpco/stack-build:lts-9.10 \
+         stack --system-ghc exec jupyter -- notebook --no-browser --ip=0.0.0.0
